@@ -7,9 +7,9 @@ public class BallLauncher : MonoBehaviour
 {
     public static BallLauncher Instance;
 
-    private Vector3 m_StartPosition;
-    private Vector3 m_EndPosition;
-    private Vector3 m_WorldPosition;
+    public Vector3 m_StartPosition;
+    public Vector3 m_EndPosition;
+    public Vector3 m_WorldPosition;
 
     private Vector3 m_Direction;
 
@@ -87,7 +87,7 @@ public class BallLauncher : MonoBehaviour
         tempDirection.Normalize();
 
         // getting the angle in radians. you can replace 1.35f with any number or without hardcode like this
-        if (Mathf.Abs(Mathf.Atan2(tempDirection.x, tempDirection.y)) < 1.35f)
+        if (Mathf.Abs(Mathf.Atan2(tempDirection.x, tempDirection.y)) <= 1.35f)
         {
             Debug.Log("Color is correct");
             m_LineRenderer.startColor = m_CorrectLineColor;
@@ -105,7 +105,7 @@ public class BallLauncher : MonoBehaviour
         m_LineRenderer.SetPosition(1, m_EndPosition - m_StartPosition);
     }
 
-    private void EndDrag()
+    public void EndDrag()
     {
         if (m_StartPosition == m_EndPosition)
             return;
@@ -115,7 +115,7 @@ public class BallLauncher : MonoBehaviour
 
         m_LineRenderer.SetPosition(1, Vector3.zero);
 
-        if (Mathf.Abs(Mathf.Atan2(m_Direction.x, m_Direction.y)) < 1.35f)   // hardcode for this time. fix it!
+        if (Mathf.Abs(Mathf.Atan2(m_Direction.x, m_Direction.y)) < 1.355f)   // hardcode for this time. fix it!
         {
             if(m_Balls.Count < m_BallsAmount)
                 SpawNewBall(m_BallsAmount - m_Balls.Count);

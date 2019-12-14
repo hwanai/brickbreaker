@@ -1,5 +1,10 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using System;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading.Tasks;
+using System.IO;
 
 public class GameManager : MonoBehaviour
 {
@@ -10,6 +15,8 @@ public class GameManager : MonoBehaviour
     public GameObject m_GameOverPanel;
     public GameObject m_Scores;
     public Text m_GameOverFinalScore;
+
+    public int after;
 
     public enum GameState { MainMenu, Playable, GameOver, }
     private GameState m_State = GameState.MainMenu;
@@ -75,8 +82,152 @@ public class GameManager : MonoBehaviour
         Instance = this;
     }
 
-    private void Start()
+    private async void Start()
     {
         m_GameState = GameState.MainMenu;
+
+        after = 0;
+
+        await ListenForLearner();
+    }
+
+    private TaskCompletionSource<int> actionPromise;
+
+    private void ResetActionPromise()
+    {
+        actionPromise = new TaskCompletionSource<int>();
+    }
+
+    public void CompleteAction()
+    {
+        actionPromise.SetResult(0);
+    }
+
+    public int CalcBrickTotal()
+    {
+        int total = 0;
+
+        for(int i = 0; i < BrickSpawner.Instance.m_BricksRow.Count; ++i)
+        {
+            for(int j = 0; j < BrickSpawner.Instance.m_BricksRow[i].m_Bricks.Length; ++j)
+            {
+                total += BrickSpawner.Instance.m_BricksRow[i].m_Bricks[j].m_Health;
+            }
+        }
+        return total;
+    }
+
+    private async Task ListenForLearner()
+    {
+        var listener = TcpListener.Create(10012);
+        listener.Start();
+
+        while (true)
+        {
+            var client = await listener.AcceptTcpClientAsync();
+            var reader = new StreamReader(client.GetStream());
+            var writer = new StreamWriter(client.GetStream());
+            writer.Flush();
+            while (true)
+            {
+                string line = await reader.ReadLineAsync();
+                if (line == null)
+                    break;
+
+                string[] args = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                if (args.Length == 0)
+                {
+                    continue;
+                }
+                else if (args[0] == "RST")
+                {
+                    m_GameState = GameState.MainMenu;
+                    m_GameState = GameState.Playable;
+                    await writer.WriteLineAsync("DONE");
+                    continue;
+                }
+                else if (args[0] == "ACT")
+                {
+                    if (int.TryParse(args[1], out int direction))
+                    {
+                        Debug.Log("direction: " + direction);
+                        ResetActionPromise();
+
+                        var tmpvec = new Vector3(Mathf.Tan(-1.35f + (direction - 1) * 0.09f), 1.0f, 0.0f);
+
+                        BallLauncher.Instance.m_StartPosition = Vector3.zero;
+                        BallLauncher.Instance.m_EndPosition = tmpvec.normalized;
+                        BallLauncher.Instance.m_CanPlay = false;
+                        int before = CalcBrickTotal();
+                        BallLauncher.Instance.EndDrag();
+
+                        await actionPromise.Task;
+                        float reward = (float)(before - after) / (float)(before);
+
+                        if (m_GameState == GameState.GameOver)
+                            reward = -2.0f;
+
+                        Color[] observation = GrabScreen.Instance.mytexture.GetPixels();
+
+                        int[] flattened = new int[40*40*3];
+
+                        for(int i = 0; i < 40*40; ++i)
+                        {
+
+                            flattened[3 * i] = (int)(observation[i].r * 255);
+                            flattened[3 * i + 1] = (int)(observation[i].g * 255);
+                            flattened[3 * i + 2] = (int)(observation[i].b * 255);
+                        }
+
+                        Debug.Log("reward: " + reward);
+
+                        string result = "";
+
+                        result = result + reward.ToString();
+
+                        foreach(int x in flattened)
+                        {
+                            result = result + " " + x.ToString();
+                        }
+
+                        await writer.WriteLineAsync(result);
+
+
+                        continue;
+                    }
+                }
+                else if (args[0] == "SRT")
+                {
+                    float reward = 0;
+
+                    Color[] observation = GrabScreen.Instance.mytexture.GetPixels();
+
+                    int[] flattened = new int[40 * 40 * 3];
+
+                    for (int i = 0; i < 40 * 40; ++i)
+                    {
+
+                        flattened[3 * i] = (int)(observation[i].r * 255);
+                        flattened[3 * i + 1] = (int)(observation[i].g * 255);
+                        flattened[3 * i + 2] = (int)(observation[i].b * 255);
+                    }
+
+                    Debug.Log("reward: " + reward);
+
+                    string result = "";
+
+                    result = result + reward.ToString();
+
+                    foreach (int x in flattened)
+                    {
+                        result = result + " " + x.ToString();
+                    }
+
+                    await writer.WriteLineAsync(result);
+                }
+
+                await writer.WriteLineAsync("Protocol Mismatch");
+            }
+        }
     }
 }

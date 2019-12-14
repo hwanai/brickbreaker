@@ -14,6 +14,7 @@ public class Ball : MonoBehaviour
     [SerializeField] private float m_MoveSpeed = 10;
 
     public float m_MinimumYPosition = -4.7f;
+    public float m_MinimumXPosition = 3.3f;
 
     private void Awake()
     {
@@ -37,7 +38,7 @@ public class Ball : MonoBehaviour
 
             if (s_FirstCollisionPoint == Vector3.zero)
             {
-                s_FirstCollisionPoint = transform.position;
+                s_FirstCollisionPoint = s_FirstCollisionPoint = new Vector3(Mathf.Clamp(transform.position.x, -m_MinimumXPosition, m_MinimumXPosition), transform.position.y, 0.0f);
                 BallLauncher.Instance.m_BallSprite.transform.position = s_FirstCollisionPoint;
                 BallLauncher.Instance.m_BallSprite.enabled = true;
             }
@@ -57,6 +58,8 @@ public class Ball : MonoBehaviour
 
         ScoreManager.Instance.UpdateScore();
 
+        GameManager.Instance.after = GameManager.Instance.CalcBrickTotal();
+
         BrickSpawner.Instance.MoveDownBricksRows();
         BrickSpawner.Instance.SpawnNewBricks();
 
@@ -64,6 +67,7 @@ public class Ball : MonoBehaviour
         s_ReturnedBallsAmount = 0;
 
         BallLauncher.Instance.m_CanPlay = true;
+        GameManager.Instance.CompleteAction();
     }
 
     public static void ResetFirstCollisionPoint()

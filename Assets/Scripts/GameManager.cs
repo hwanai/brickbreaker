@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using System;
 using System.Net.Sockets;
 using System.Text;
+using System.Linq;
 using System.Threading.Tasks;
 using System.IO;
 
@@ -122,111 +123,61 @@ public class GameManager : MonoBehaviour
         var listener = TcpListener.Create(10012);
         listener.Start();
 
-        while (true)
+        using (var client = await listener.AcceptTcpClientAsync())
         {
-            var client = await listener.AcceptTcpClientAsync();
             var reader = new StreamReader(client.GetStream());
             var writer = new StreamWriter(client.GetStream());
-            writer.Flush();
             while (true)
             {
                 string line = await reader.ReadLineAsync();
-                if (line == null)
-                    break;
-
                 string[] args = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 if (args.Length == 0)
                 {
-                    continue;
+                    // IGNORE
                 }
-                else if (args[0] == "RST")
+                else if (args[0] == "RESET")
                 {
                     m_GameState = GameState.MainMenu;
                     m_GameState = GameState.Playable;
-                    await writer.WriteLineAsync("DONE");
-                    continue;
+                    await writer.WriteAsync("DONE\n");
+                    await writer.FlushAsync();
                 }
-                else if (args[0] == "ACT")
+                else if (args[0] == "SCREEN")
                 {
-                    if (int.TryParse(args[1], out int direction))
-                    {
-                        Debug.Log("direction: " + direction);
-                        ResetActionPromise();
-
-                        var tmpvec = new Vector3(Mathf.Tan(-1.35f + (direction - 1) * 0.09f), 1.0f, 0.0f);
-
-                        BallLauncher.Instance.m_StartPosition = Vector3.zero;
-                        BallLauncher.Instance.m_EndPosition = tmpvec.normalized;
-                        BallLauncher.Instance.m_CanPlay = false;
-                        int before = CalcBrickTotal();
-                        BallLauncher.Instance.EndDrag();
-
-                        await actionPromise.Task;
-                        float reward = (float)(before - after) / (float)(before);
-
-                        if (m_GameState == GameState.GameOver)
-                            reward = -2.0f;
-
-                        Color[] observation = GrabScreen.Instance.mytexture.GetPixels();
-
-                        int[] flattened = new int[40*40*3];
-
-                        for(int i = 0; i < 40*40; ++i)
-                        {
-
-                            flattened[3 * i] = (int)(observation[i].r * 255);
-                            flattened[3 * i + 1] = (int)(observation[i].g * 255);
-                            flattened[3 * i + 2] = (int)(observation[i].b * 255);
-                        }
-
-                        Debug.Log("reward: " + reward);
-
-                        string result = "";
-
-                        result = result + reward.ToString();
-
-                        foreach(int x in flattened)
-                        {
-                            result = result + " " + x.ToString();
-                        }
-
-                        await writer.WriteLineAsync(result);
-
-
-                        continue;
-                    }
-                }
-                else if (args[0] == "SRT")
-                {
-                    float reward = 0;
-
                     Color[] observation = GrabScreen.Instance.mytexture.GetPixels();
 
-                    int[] flattened = new int[40 * 40 * 3];
+                    var pixelString = observation.Select(color => ((int)(255 * color.r), (int)(255 * color.g), (int)(255 * color.b)))
+                        .Select(color => string.Format("{0:D3} {0:D3} {0:D3}", color.Item1, color.Item2, color.Item3))
+                        .Aggregate(new StringBuilder(), (total, item) => total.Append(" ").Append(item));
 
-                    for (int i = 0; i < 40 * 40; ++i)
-                    {
-
-                        flattened[3 * i] = (int)(observation[i].r * 255);
-                        flattened[3 * i + 1] = (int)(observation[i].g * 255);
-                        flattened[3 * i + 2] = (int)(observation[i].b * 255);
-                    }
-
-                    Debug.Log("reward: " + reward);
-
-                    string result = "";
-
-                    result = result + reward.ToString();
-
-                    foreach (int x in flattened)
-                    {
-                        result = result + " " + x.ToString();
-                    }
-
-                    await writer.WriteLineAsync(result);
+                    await writer.WriteAsync(pixelString + "\n");
+                    await writer.FlushAsync();
                 }
+                else if (args[0] == "ACTION" && int.TryParse(args[1], out int direction))
+                {
+                    Debug.Log("direction: " + direction);
+                    ResetActionPromise();
 
-                await writer.WriteLineAsync("Protocol Mismatch");
+                    var tmpvec = new Vector3(Mathf.Tan(-1.35f + (direction - 1) * 0.09f), 1.0f, 0.0f);
+
+                    BallLauncher.Instance.m_StartPosition = Vector3.zero;
+                    BallLauncher.Instance.m_EndPosition = tmpvec.normalized;
+                    BallLauncher.Instance.m_CanPlay = false;
+                    int before = CalcBrickTotal();
+                    BallLauncher.Instance.EndDrag();
+                    float reward = (float)(before - after) / (float)(before);
+                    if (m_GameState == GameState.GameOver)
+                        reward = -2.0f;
+
+                    await actionPromise.Task;
+                    await writer.WriteAsync(reward.ToString() + "\n");
+                    await writer.FlushAsync();
+                }
+                else
+                {
+                    await writer.WriteAsync("Protocol Mismatch\n");
+                    await writer.FlushAsync();
+                }
             }
         }
     }

@@ -110,10 +110,15 @@ public class GameManager : MonoBehaviour
 
         for(int i = 0; i < BrickSpawner.Instance.m_BricksRow.Count; ++i)
         {
-            if(i )
-            for(int j = 0; j < BrickSpawner.Instance.m_BricksRow[i].m_Bricks.Length; ++j)
+            if (BrickSpawner.Instance.m_BricksRow[i].gameObject.activeInHierarchy)
             {
-                total += BrickSpawner.Instance.m_BricksRow[i].m_Bricks[j].m_Health;
+                for (int j = 0; j < BrickSpawner.Instance.m_BricksRow[i].m_Bricks.Length; ++j)
+                {
+                    if (BrickSpawner.Instance.m_BricksRow[i].m_Bricks[j].gameObject.activeInHierarchy)
+                    {
+                        total += BrickSpawner.Instance.m_BricksRow[i].m_Bricks[j].m_Health;
+                    }
+                }
             }
         }
         return total;

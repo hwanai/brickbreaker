@@ -165,13 +165,14 @@ public class GameManager : MonoBehaviour
                     BallLauncher.Instance.m_CanPlay = false;
                     int before = CalcBrickTotal();
                     BallLauncher.Instance.EndDrag();
-                    float reward = (float)(before - after) / (float)(before);
+                    float reward = ((float)(before - after)) / ((float)(before));
                     if (m_GameState == GameState.GameOver)
                         reward = -2.0f;
 
                     await actionPromise.Task;
                     await writer.WriteAsync(reward.ToString() + "\n");
                     await writer.FlushAsync();
+                    Debug.Log("reward: " + reward + " : " + before + " : " + after);
                 }
                 else
                 {

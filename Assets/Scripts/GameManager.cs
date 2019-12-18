@@ -171,14 +171,17 @@ public class GameManager : MonoBehaviour
                     BallLauncher.Instance.m_CanPlay = false;
                     int before = CalcBrickTotal();
                     BallLauncher.Instance.EndDrag();
+                    
+
+                    await actionPromise.Task;
+
                     float reward = ((float)(before - after)) / ((float)(before));
                     if (m_GameState == GameState.GameOver)
                         reward = -2.0f;
 
-                    await actionPromise.Task;
-                    await writer.WriteAsync(reward.ToString() + "\n");
+                    await writer.WriteAsync(String.Format("{0,-1:F7}", reward) + '\n');
                     await writer.FlushAsync();
-                    Debug.Log("reward: " + reward + " : " + before + " : " + after);
+                    Debug.Log("reward" + reward + " : " + "Ball position : " + BallLauncher.Instance.gameObject.transform.position);
                 }
                 else
                 {

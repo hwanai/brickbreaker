@@ -2,10 +2,12 @@
 
 public class BricksRow : MonoBehaviour
 {
-    public float m_FloorPosition = -4.25f;
+    public float m_FloorPosition = -3.8f;
 
     public Brick[] m_Bricks;
     public ScoreBall[] m_ScoreBalls;
+
+    public bool isminy;
 
     private void Awake()
     {
@@ -21,7 +23,7 @@ public class BricksRow : MonoBehaviour
         HideAll();
         GoToTop();
 
-        MoveDown(BrickSpawner.Instance.m_SpawningDistance);
+        MoveDown(BrickSpawner.Instance.m_SpawningDistance, -1000f);
 
         // make only one score ball available for this row randomly
         m_ScoreBalls[Random.Range(0, m_ScoreBalls.Length)].gameObject.SetActive(true);
@@ -87,13 +89,40 @@ public class BricksRow : MonoBehaviour
         transform.localPosition = new Vector3(0, BrickSpawner.Instance.m_SpawningTopPosition, 0);
     }
 
-    public void MoveDown(float howMuch)
+    public void TellGMActionComplete()
+    {
+        if (transform.localPosition.y <= m_FloorPosition)
+        {
+            if (HasActiveBricks())
+            {
+                GameManager.Instance.m_GameState = GameManager.GameState.GameOver;
+                //GameManager.Instance.CompleteAction();
+            }
+        }
+        if (isminy)
+        { 
+            GameManager.Instance.CompleteAction();
+            isminy = false;
+        }
+        Debug.Log("Finished Moving Down");
+    }
+
+    public void MoveDown(float howMuch, float miny)
     {
         for (int i = 0; i < m_Bricks.Length; i++)
             if (m_Bricks[i].gameObject.activeInHierarchy)
                 m_Bricks[i].ChangeColor();
 
-        iTween.MoveTo(gameObject, new Vector3(transform.position.x, transform.position.y - howMuch, transform.position.z), 0.25f);
+        var finalposition = new Vector3(transform.position.x, transform.position.y - howMuch, transform.position.z);
+
+        isminy = false;
+
+        if (transform.position.y == miny)
+            isminy = true;
+
+        iTween.MoveTo(gameObject, iTween.Hash("position", finalposition, "time", 0.25f, "oncomplete", "TellGMActionComplete", "oncompletetarget", this.gameObject));
+        
+        //iTween.MoveTo(gameObject, new Vector3(transform.position.x, transform.position.y - howMuch, transform.position.z), 0.25f);
     }
 
     public void CheckBricksActivation()

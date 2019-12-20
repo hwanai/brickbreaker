@@ -3264,7 +3264,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1158600851}
   - component: {fileID: 1158600850}
-  - component: {fileID: 1158600849}
   - component: {fileID: 1158600848}
   m_Layer: 0
   m_Name: Camera
@@ -3287,15 +3286,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   grab: 0
   thecamera: {fileID: 1158600850}
+  mytexture: {fileID: 0}
   m_Display: {fileID: 1558903809}
---- !u!81 &1158600849
-AudioListener:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1158600847}
-  m_Enabled: 1
 --- !u!20 &1158600850
 Camera:
   m_ObjectHideFlags: 0

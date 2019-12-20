@@ -14,7 +14,7 @@ public class Ball : MonoBehaviour
     [SerializeField] private float m_MoveSpeed = 10;
 
     public float m_MinimumYPosition = -4.7f;
-    public float m_MinimumXPosition = 3.4f;
+    public float m_MinimumXPosition = 2.8f;
 
     private void Awake()
     {
@@ -39,6 +39,7 @@ public class Ball : MonoBehaviour
             if (s_FirstCollisionPoint == Vector3.zero)
             {
                 s_FirstCollisionPoint = new Vector3(Mathf.Clamp(transform.position.x, -m_MinimumXPosition, m_MinimumXPosition), transform.position.y, 0.0f);
+                Debug.Log("First Collision Point : " + s_FirstCollisionPoint);
                 BallLauncher.Instance.m_BallSprite.transform.position = s_FirstCollisionPoint;
                 BallLauncher.Instance.m_BallSprite.enabled = true;
             }
@@ -60,7 +61,7 @@ public class Ball : MonoBehaviour
 
         GameManager.Instance.after = GameManager.Instance.CalcBrickTotal();
 
-        BrickSpawner.Instance.MoveDownBricksRows();
+        var clearedscreen = BrickSpawner.Instance.MoveDownBricksRows();
         BrickSpawner.Instance.SpawnNewBricks();
 
         s_FirstCollisionPoint = Vector3.zero;
@@ -68,14 +69,18 @@ public class Ball : MonoBehaviour
 
         BallLauncher.Instance.m_CanPlay = true;
 
-        for(var i = 0; i < BrickSpawner.Instance.m_BricksRow.Count; ++i)
+        /*for(var i = 0; i < BrickSpawner.Instance.m_BricksRow.Count; ++i)
         {
             var tmp = BrickSpawner.Instance.m_BricksRow[i];
             if (tmp.transform.position.y <= (tmp.m_FloorPosition +BrickSpawner.Instance.m_SpawningDistance) && tmp.HasActiveBricks())
                 GameManager.Instance.m_GameState = GameManager.GameState.GameOver;
+        }*/
+        //GameManager.Instance.CompleteAction();
+        if (clearedscreen)
+        {
+            Debug.Assert(false);
+            GameManager.Instance.CompleteAction();
         }
-        
-        GameManager.Instance.CompleteAction();
     }
 
     public static void ResetFirstCollisionPoint()

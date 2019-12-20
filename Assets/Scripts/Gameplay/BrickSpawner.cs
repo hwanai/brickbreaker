@@ -53,10 +53,24 @@ public class BrickSpawner : MonoBehaviour
         m_LevelOfFinalBrick++;
     }
 
-    public void MoveDownBricksRows()
+    public bool MoveDownBricksRows()
     {
+        bool nonempty = true;
+        var miny = m_BricksRow[0].transform.position.y;
+        for (var i = 0; i < m_BricksRow.Count; ++i)
+        {
+            var tmp = m_BricksRow[i];
+            if (tmp.transform.position.y <= miny && tmp.gameObject.activeInHierarchy)
+                miny = tmp.transform.position.y;
+        }
+
         for (int i = 0; i < m_BricksRow.Count; i++)
             if (m_BricksRow[i].gameObject.activeInHierarchy)
-                m_BricksRow[i].MoveDown(m_SpawningDistance);
+            { 
+                m_BricksRow[i].MoveDown(m_SpawningDistance, miny);
+                nonempty = false;
+            }
+
+        return nonempty;
     }
 }

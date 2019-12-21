@@ -151,10 +151,57 @@ public class GameManager : MonoBehaviour
                 }
                 else if (args[0] == "SCREEN")
                 {
-                    Color[] observation = GrabScreen.Instance.mytexture.GetPixels();
+                    float[,] tmpscreen = new float[BrickSpawner.Instance.m_SpawningRows, 6];
+                    float[,] screen = new float[BrickSpawner.Instance.m_SpawningRows, 6];
+                    BricksRow[] wow = new BricksRow[BrickSpawner.Instance.m_SpawningRows];
+                    for (int i = 0; i < BrickSpawner.Instance.m_BricksRow.Count; ++i)
+                    {
+                        var tmp = BrickSpawner.Instance.m_BricksRow[i];
+                        for (int j = 0; j < tmp.m_Bricks.Length; ++j)
+                        {
+                            if(tmp.m_Bricks[j].gameObject.activeInHierarchy)
+                            {
+                                tmpscreen[i,j] = (float)(tmp.m_Bricks[j].m_Health) / (float)(BallLauncher.Instance.m_BallsAmount);
+                            }
+                            else if(tmp.m_ScoreBalls[j].gameObject.activeInHierarchy)
+                            {
+                                tmpscreen[i,j] = -1.0f;
+                            }
+                            else
+                            {
+                                tmpscreen[i,j] = 0.0f;
+                            }
+                        }
+                    }
 
-                    var pixelString = observation.Select(color => ((int)(255 * color.r), (int)(255 * color.g), (int)(255 * color.b)))
-                        .Select(color => string.Format("{0:D3} {0:D3} {0:D3}", color.Item1, color.Item2, color.Item3))
+                    var miny = BrickSpawner.Instance.m_BricksRow[0].transform.position.y;
+                    var minyi = 0;
+                    for (var i = 0; i < BrickSpawner.Instance.m_BricksRow.Count; ++i)
+                    {
+                        var tmp = BrickSpawner.Instance.m_BricksRow[i];
+                        if (tmp.transform.position.y <= miny && tmp.gameObject.activeInHierarchy)
+                        { 
+                            miny = tmp.transform.position.y;
+                            minyi = i;
+                        }
+                    }
+
+                    var index = minyi;
+                    var realindex = 0;
+                    do
+                    {
+                        for (var j = 0; j < 6; ++j)
+                        {
+                            screen[realindex, j] = tmpscreen[index, j];
+                        }
+                        ++realindex;
+                        ++index;
+                        index = index % BrickSpawner.Instance.m_BricksRow.Count;
+                    } while (realindex < BrickSpawner.Instance.m_BricksRow.Count);
+
+                    var flattenedscreen = screen.Cast<float>().ToArray();
+
+                    var pixelString = flattenedscreen.Select(arow => string.Format("{0,-1:+0.0000000;-#.0000000}", arow))
                         .Aggregate(new StringBuilder(), (total, item) => total.Append(" ").Append(item));
 
                     await writer.WriteAsync(pixelString + "\n");
